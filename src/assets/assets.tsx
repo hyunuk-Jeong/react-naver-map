@@ -1,0 +1,1 @@
+export {default as ic_gps} from './image/ic_gps.png';
