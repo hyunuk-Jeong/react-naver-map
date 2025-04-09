@@ -4,7 +4,7 @@ export const webviewListener = (event: any, mapRef: any, mapActions: any) => {
         console.log(`webviewListener 호출됨 ${mapRef.current}`);
         if (mapRef.current == null) return; // 맵이 초기화되지 않은 경우 리턴
 
-        const { addMarker, removeMarker, clearMarkers, goToTargetLocation, setDefaultMarkerStyle, setSelectedMarkerStyle, setInfoWindowContent } = mapActions;
+        const { updateMarkers, addMarker, removeMarker, clearMarkers, goToTargetLocation, setDefaultMarkerStyle, setSelectedMarkerStyle, setInfoWindowContent } = mapActions;
 
         const message = JSON.parse(event.data);
         console.log("[RECEIVED MESSAGE]:", message);
@@ -26,11 +26,12 @@ export const webviewListener = (event: any, mapRef: any, mapActions: any) => {
         }
 
         if (message.type === "updateMarkers") {
-            console.log(`🔴 updateMarkers 호출됨: ${message.markers}`);
-            clearMarkers(); // 기존 마커 삭제
-            message.markers.forEach((marker: any) => {
-                addMarker(mapRef, marker);
-            });
+            console.log(`🔴 updateMarkers 호출됨`);
+            updateMarkers(mapRef, message.markers); // 마커 업데이트 함수 호출
+            // clearMarkers(); // 기존 마커 삭제
+            // message.markers.forEach((marker: any) => {
+            //     addMarker(mapRef, marker);
+            // });
         }
         if (message.type === "setDefaultMarkerStyle") {
             console.log(`🔴 setDefaultMarkerStyle 호출됨: ${message.style}`);
@@ -50,6 +51,20 @@ export const webviewListener = (event: any, mapRef: any, mapActions: any) => {
         if (message.type === "goToLocation") {
             console.log(`🔴 goToLocation 호출됨: ${message.lat}, ${message.lon}`);
             goToTargetLocation(message.lat, message.lon);
+        }
+
+        if(message.type === "setMaxZoom"){
+            console.log(`🔴 setMaxZoom 호출됨: ${message.zoom}`);
+            mapRef.current.setOptions({
+                maxZoom: message.zoom
+            })
+        }   
+
+        if(message.type === "setMinZoom"){
+            console.log(`🔴 setMinZoom 호출됨: ${message.zoom}`);
+            mapRef.current.setOptions({
+                minZoom: message.zoom
+            })
         }
 
 

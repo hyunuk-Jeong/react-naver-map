@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { ic_marker, ic_marker_selected } from "../assets/assets";
 
 const useMarkers = () => {
   const [currentLocationMarker, setCurrentLocationMarker] = useState<any>(null);
@@ -7,12 +8,16 @@ const useMarkers = () => {
   const infoWindowRef = useRef<any>(""); // 인포윈도우 저장
 
   const defaultMarkerIconRef = useRef({
-    content: `<div style="width: 12px; height: 12px; background-color: red; border-radius: 50%; border: 2px solid white;"></div>`,
+    content: `<div style="width: 24px; height: 24px;">
+              <img src="${ic_marker}" style="width: 100%; height: 100%;" />
+            </div>`,
     anchor: null
   });
 
   const selectedMarkerIconRef = useRef({
-    content: `<div style="width: 16px; height: 16px; background-color: blue; border-radius: 50%; border: 2px solid white;"></div>`,
+    content: `<div style="width: 24px; height: 24px;">
+              <img src="${ic_marker_selected}" style="width: 100%; height: 100%;" />
+            </div>`,
     anchor: null
   });
 
@@ -22,6 +27,13 @@ const useMarkers = () => {
       content: content,
       anchor: new window.naver.maps.Point(anchorX, anchorY),
     };
+    // 기본 마커 스타일 변경 즉시 반영
+    markersRef.current.forEach((marker) => {
+      const markerInfo = marker.get("markerInfo");
+      if (!selectedMarkerRef.current || markerInfo.id !== selectedMarkerRef.current.get("markerInfo")?.id) {
+        marker.setIcon(defaultMarkerIconRef.current);
+      }
+    });
   };
 
   // ✅ 선택된 마커 스타일 변경 함수 (anchor 값 추가)
@@ -30,6 +42,10 @@ const useMarkers = () => {
       content: content,
       anchor: new window.naver.maps.Point(anchorX, anchorY),
     };
+    // 선택된 마커 스타일 변경 즉시 반영
+    if (selectedMarkerRef.current) {
+      selectedMarkerRef.current.setIcon(selectedMarkerIconRef.current);
+    }
   };
 
 
@@ -38,12 +54,11 @@ const useMarkers = () => {
 
   const addMarker = (mapRef: any, markerInfo: any) => {
     if (!mapRef.current) return;
-
     const selectedMarkerID = selectedMarkerRef.current?.get("markerInfo").id || null;
 
     const marker = new window.naver.maps.Marker({
       position: new window.naver.maps.LatLng(
-        markerInfo.lat || markerInfo.latitude, // lat 또는 latitude 사용
+        markerInfo.lat || markerInfo.latitude,
         markerInfo.lng || markerInfo.longitude
       ),
       map: mapRef.current,
@@ -95,6 +110,31 @@ const useMarkers = () => {
     markersRef.current.push(marker);
   };
 
+  const updateMarkers = (mapRef: any, markers: any[]) => {
+    if (!mapRef.current) return;
+    console.log(`${markers.length} markers to update`);
+    const newMarkers = markers;
+    const newIds = newMarkers.map((marker) => marker.id);
+    const existingMarkers = markersRef.current;
+    //기존 마커 중 제거할 마커
+    const markersToRemove = existingMarkers.filter((marker) => {
+      const id = marker.get("markerInfo")?.id;
+      return !newIds.includes(id);
+    });
+
+    //제거
+    markersToRemove.forEach((marker) => {
+      marker.setMap(null);
+    });
+    markersRef.current = existingMarkers.filter(marker => !markersToRemove.includes(marker));
+    //새로 초가할 마커
+    const existingIds = existingMarkers.map((marker) => marker.get("markerInfo")?.id);
+    const markersToAdd = newMarkers.filter(marker => !existingIds.includes(marker.id));
+    markersToAdd.forEach((marker) => {
+      addMarker(mapRef, marker);
+    });
+  };
+
   const addCurrentLocationMarker = (mapRef: any, position: { lat: number; lng: number }) => {
     if (!mapRef.current) return;
 
@@ -131,7 +171,7 @@ const useMarkers = () => {
     console.log(`Markers cleared. Current markers: ${markersRef.current.length}`);
   };
 
-  const setInfoWindowContent = (mapRef:any,content: string = "", anchorX = 0, anchorY = 0) => {
+  const setInfoWindowContent = (mapRef: any, content: string = "", anchorX = 0, anchorY = 0) => {
     // 기존 InfoWindow가 열려있다면 닫기
     if (infoWindowRef.current) {
       infoWindowRef.current.close();
@@ -178,7 +218,7 @@ const useMarkers = () => {
     window.naver.maps.Event.addListener(mapRef.current, "zoom_changed", clearSelection);
   };
 
-  return { addMarker, removeMarker, clearMarkers, addCurrentLocationMarker, setDefaultMarkerStyle, setSelectedMarkerStyle, setInfoWindowContent, addMapMarkerListener };
+  return { updateMarkers, addMarker, removeMarker, clearMarkers, addCurrentLocationMarker, setDefaultMarkerStyle, setSelectedMarkerStyle, setInfoWindowContent, addMapMarkerListener };
 };
 
 export default useMarkers;
